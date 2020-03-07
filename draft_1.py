@@ -12,7 +12,7 @@ from pandas import DataFrame
 ### ----- Parameters to Change ----- ###
 H = 140  # No. of pixels to select for height of Region Of Interest
 blur_value = 7  # value = 3,5 or 7 (ODD).median Blur value determines the accuracy of detection
-Delay = 5000  # time value in miliseconds. (Fastest) Minimum = 1ms
+Delay = 1000  # time value in miliseconds. (Fastest) Minimum = 1ms
 Show = 1  # To display the image. 1 = On, 0 = Off
 Skip_frames = 20  # number of frames to skip before Im showing
 file_name = "Raw Video Output 10x Inv-L.avi"  # Getting all open files location
@@ -65,11 +65,11 @@ def to_crop(frame, r, Channels):
         sub_ch_x = round(x * (r[2] / (ch))) #place where line will be drawn, proportional to width
         sub_ch.append(sub_ch_x)
         cv2.line(imCrop, (sub_ch[x], 0), (sub_ch[x], H), line_color, 1)
-    return imCrop
+    return imCrop, x1, x2, y1, y2, sub_ch
 
 
 def main():
-    # main initialising
+    # Get ROI from frames
     total_sum = []
     cap = cv2.VideoCapture(file_name)
     ret, image = cap.read()
@@ -79,50 +79,60 @@ def main():
     print('***** PROCESSING ROI for RUN 1 ***** File: %s' % file_name)
     print('total number of ROI :%i\n' % len(roi_sel))
 
-    # Reduce the for loops to only 1
-    # cap = cv2.VideoCapture(file_name)
+    '''
+    Get crop size and draw lines
+    '''
     print('***** PROCESSING RUN 1 ***** File: %s' % file_name)
     # # Read image start image
     # ret, frame = cap.read()
+
     cur = 0
     r = roi_sel[cur]
-    prep_crop = to_crop(frame, r, Channels)
+    prep_crop, x1, x2, y1, y2, sub_ch = to_crop(frame, r, Channels)
 
     cv2.namedWindow('Cropped Image', cv2.WINDOW_NORMAL)
     cv2.imshow('Cropped Image', prep_crop)
     cv2.waitKey(Delay)
-    ##initialise all the values
+
+    '''
+    Background Subtract
+    '''
     count = 0
     spot_all = []
     # mask = cv2.createBackgroundSubtractorMOG2()
     mask = cv2.createBackgroundSubtractorMOG2(history=3,
                                               varThreshold=100,
                                               detectShadows=False)
-    sum_ch1 = [0] * Channels
+    sum_ch1 = np.zeros(28)
     #
     # # metrics
     fps = FPS().start()
     start = time.time()
     error = 0
-
+    contour_detection = {}
+    blur_bgsub = {}
     # run count
-    while (cap.isOpened()):
+    while cap.isOpened():
 
         count += 1
         ret, pic = cap.read()
-
-        # if the frame/pic was not grabbed, then we have reached the end of stream
+        # print(count)
         if not ret: break
         cycle_start = time.clock()
-
+        augment_start = time.time()
         pic = pic[y1:(y1 + H), x1:x2]
         # crop = bgSubtract(mask,pic)
         crop = mask.apply(pic)
         crop = cv2.medianBlur(crop, blur_value)
         crop = cv2.threshold(crop, 125, 255, cv2.THRESH_BINARY)[1]
+        augment_end = time.time()
+        blur_bgsub[count] = augment_end - augment_start
 
-        # find contours
-        contours, hierarcy = cv2.findContours(crop, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        '''
+        Contour Detection
+        '''
+        count_start = time.time()
+        contours = cv2.findContours(crop, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         # list of all the coordinates (tuples) of each cell
         coord_list = []
@@ -138,6 +148,8 @@ def main():
                 sum_ch1[ch_pos] += 1
             except:
                 error += 1
+        count_end = time.time()
+        contour_detection[count] = count_end - count_start
 
         # show the counting
         if Show == 1 and count % Skip_frames == 0:
@@ -149,8 +161,25 @@ def main():
         fps.update()
         cycle_end = time.clock()
 
-    # end = time.time()
-    # fps.stop()
+    end = time.time()
+    fps.stop()
+    detect_benchmark = end - start
+    print("Time taken for counting:",detect_benchmark)
+
+    cap.release()
+    cv2.destroyAllWindows()
+    aug_list = list(blur_bgsub.values())
+    df_augment = DataFrame(data=aug_list)
+    df_augment.plot()
+    detection_list = list(contour_detection.values())
+    df_detect = DataFrame(data=detection_list)
+    df_detect.plot()
+
+    avg_augment = np.mean(df_augment)
+    avg_detect = np.mean(df_detect)
+
+    print("Average time for bgsubtract and blur: %f\n" % avg_augment)
+    print("Average time for count: %f\n" % avg_detect)
     #
     # # set an array of sub channel dimension
     # print('[RESULTS] for RUN', (cur + 1), 'is ', sum_ch1)
