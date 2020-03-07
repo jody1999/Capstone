@@ -1,12 +1,13 @@
-import cv2
-import numpy as np
-from imutils.video import FPS
-from skimage.feature import blob_dog, blob_log, blob_doh
 import math
 import time
-import tkinter as tk
-from tkinter.filedialog import askopenfilenames
-from tkinter.filedialog import asksaveasfilename
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+from imutils.video import FPS
+# import tkinter as tk
+# from tkinter.filedialog import askopenfilenames
+# from tkinter.filedialog import asksaveasfilename
 from pandas import DataFrame
 
 ### ----- Parameters to Change ----- ###
@@ -132,11 +133,10 @@ def main():
         Contour Detection
         '''
         count_start = time.time()
-        contours = cv2.findContours(crop, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
+        image, contours, hierarchy = cv2.findContours(crop, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # list of all the coordinates (tuples) of each cell
         coord_list = []
-
+        # print(contours)
         # to find the coordinates of the cells
         for i in range(len(contours)):
             avg = np.mean(contours[i], axis=0)
@@ -170,52 +170,58 @@ def main():
     cv2.destroyAllWindows()
     aug_list = list(blur_bgsub.values())
     df_augment = DataFrame(data=aug_list)
-    df_augment.plot()
+    df_augment.plot(y=['Augment'])
+    plt.savefig("df_augment")
     detection_list = list(contour_detection.values())
     df_detect = DataFrame(data=detection_list)
-    df_detect.plot()
+    df_detect.plot(y='Detection')
+    plt.savefig("df_detect")
+
+
 
     avg_augment = np.mean(df_augment)
     avg_detect = np.mean(df_detect)
 
     print("Average time for bgsubtract and blur: %f\n" % avg_augment)
     print("Average time for count: %f\n" % avg_detect)
-    #
-    # # set an array of sub channel dimension
-    # print('[RESULTS] for RUN', (cur + 1), 'is ', sum_ch1)
-    # print('[ERROR] Count is: ', error)
-    #
-    # # stop the timer and display FPS information
-    # print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
-    # print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
-    # print('[INFO] Each cycle time taken = %0.5fs' % (cycle_end - cycle_start))
-    # print('----------------------------------------------------------------------')
-    #
-    # cap.release()
-    # cv2.destroyAllWindows()
-    #
-    # total_sum.append(sum_ch1)
-    #
-    # ###write dataframes and export to an Excel file
-    # check = 0
-    # title = []
-    # for j in range(len(total_sum)):
-    #     if check < len(total_sum[j]): check = len(total_sum[j])
-    #     title.append('Run %i ' % (j + 1) + str(file[j]))
-    #
-    # index = np.arange(0, check, 1)
-    #
-    # for k in range(len(total_sum)):
-    #     if len(total_sum[k]) < check:
-    #         for l in range(len(total_sum[k]), check):
-    #             total_sum[k].append(0)
-    #
-    #
-    # TTotal_sum = list(map(list, zip(*total_sum)))
-    # # print(TTotal_sum)
-    # df = DataFrame(data=TTotal_sum, columns=title)
+
+    # set an array of sub channel dimension
+    print('[RESULTS] for RUN', (cur + 1), 'is ', sum_ch1)
+    print('[ERROR] Count is: ', error)
+
+    # stop the timer and display FPS information
+    print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+    print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+    print('[INFO] Each cycle time taken = %0.5fs' % (cycle_end - cycle_start))
+    print('----------------------------------------------------------------------')
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+    total_sum.append(sum_ch1)
+
+    ###write dataframes and export to an Excel file
+    check = 0
+    title = []
+    for j in range(len(total_sum)):
+        if check < len(total_sum[j]): check = len(total_sum[j])
+        title.append('Run 1')
+
+    index = np.arange(0, check, 1)
+
+    for k in range(len(total_sum)):
+        if len(total_sum[k]) < check:
+            for l in range(len(total_sum[k]), check):
+                total_sum[k].append(0)
+
+
+    TTotal_sum = list(map(list, zip(*total_sum)))
+    # print(TTotal_sum)
+    df = DataFrame(data=TTotal_sum, columns=title)
     # savefile = asksaveasfilename(filetypes=(("Excel files", "*.xlsx"), ("All files", "*.*")))
-    # df.to_excel(savefile + ".xlsx", index=False, sheet_name="Results")
+    df.to_excel("testfile" + ".xlsx", index=False, sheet_name="Results")
+    plt.show()
+
 
 if __name__ == "__main__":
     main()
