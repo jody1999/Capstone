@@ -127,7 +127,7 @@ def main():
         crop = cv2.medianBlur(crop, blur_value)
         crop = cv2.threshold(crop, 125, 255, cv2.THRESH_BINARY)[1]
         augment_end = time.time()
-        blur_bgsub[count] = augment_end - augment_start
+        blur_bgsub[count] = augment_end*1000.0 - augment_start*1000.0
 
         '''
         Contour Detection
@@ -149,7 +149,7 @@ def main():
             except:
                 error += 1
         count_end = time.time()
-        contour_detection[count] = count_end - count_start
+        contour_detection[count] = count_end*1000.0 - count_start*1000.0
 
         # show the counting
         if Show == 1 and count % Skip_frames == 0:
@@ -166,15 +166,23 @@ def main():
     detect_benchmark = end - start
     print("Time taken for counting:",detect_benchmark)
 
+    print("contour detection:",contour_detection)
+    print("augment:", blur_bgsub)
     cap.release()
     cv2.destroyAllWindows()
     aug_list = list(blur_bgsub.values())
-    df_augment = DataFrame(data=aug_list)
-    df_augment.plot(y=['Augment'])
+    df_augment:DataFrame = DataFrame(data=aug_list)
+    plot1 = df_augment.plot()
+    plot1.set_xlabel('frames')
+    plot1.set_ylabel('Time in ms')
+
     plt.savefig("df_augment")
+
     detection_list = list(contour_detection.values())
     df_detect = DataFrame(data=detection_list)
-    df_detect.plot(y='Detection')
+    plot2 = df_detect.plot()
+    plot2.set_xlabel('frames')
+    plot2.set_ylabel('Time in ms')
     plt.savefig("df_detect")
 
 
