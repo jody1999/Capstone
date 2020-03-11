@@ -797,9 +797,9 @@ def save_data():
 
 
     out.release    
-    cam.EndAcquisition()   
+    cam.EndAcquisition()
     cv2.destroyAllWindows()
-    print('FPS captured is =' , fps)
+    print('FPS captured is =' , FPS)
     view_mode = 0
     label.setText("Hello...What's next?")
     camera_reset()
