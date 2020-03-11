@@ -17,7 +17,7 @@ Delay = 1000  # time value in miliseconds. (Fastest) Minimum = 1ms
 Show = 1  # To display the image. 1 = On, 0 = Off
 Skip_frames = 20  # number of frames to skip before Im showing
 file_name = "Raw Video Output 10x Inv-L.avi"  # Getting all open files location
-Channels = 5
+Channels = 25
 line_color = (200, 100, 100)
 
 
@@ -57,7 +57,7 @@ def to_crop(frame, r, Channels):
 
     print(x1, x2, y1, y2)
     imCrop = frame[y1:(y1 + H), x1:x2]
-
+    print(frame.shape)
     # the array for sub-channels
     sub_ch = []
 
@@ -65,13 +65,101 @@ def to_crop(frame, r, Channels):
     for x in range(ch + 1):
         sub_ch_x = round(x * (r[2] / (ch))) #place where line will be drawn, proportional to width
         sub_ch.append(sub_ch_x)
-        cv2.line(imCrop, (sub_ch[x], 0), (sub_ch[x], H), line_color, 1)
+    #     cv2.line(imCrop, (sub_ch[x], 0), (sub_ch[x], H), line_color, 1)
     return imCrop, x1, x2, y1, y2, sub_ch
 
+def bench_plot(blur_bgsub, contour_detection):
+    aug_list = list(blur_bgsub.values())
+    df_augment:DataFrame = DataFrame(data=aug_list)
+    plot1 = df_augment.plot()
+    plot1.set_xlabel('frames')
+    plot1.set_ylabel('Time in ms')
 
-def main():
-    # Get ROI from frames
+    plt.savefig("df_augment")
+
+    detection_list = list(contour_detection.values())
+    df_detect = DataFrame(data=detection_list)
+    plot2 = df_detect.plot()
+    plot2.set_xlabel('frames')
+    plot2.set_ylabel('Time in ms')
+    plt.savefig("df_detect")
+
+
+
+    avg_augment = np.mean(df_augment)
+    avg_detect = np.mean(df_detect)
+
+    print("Average time for bgsubtract and blur: %f\n" % avg_augment)
+    print("Average time for count: %f\n" % avg_detect)
+
+def npy_detect(npy_file, channels=25):
+    error = 0
+    r = [0, 0, 934, 239]
+    video_frames = np.load(npy_file)
+    sub_ch = [round(x * (r[2] / (channels))) for x in range(channels + 1)]
+    y1 = int(r[1])  # y
+    y2 = int(r[1] + r[3])  # y + height = height of cropped
+    x1 = int(r[0])  # x
+    x2 = int(r[0] + r[2])  # x + width = width of cropped
+
+    for frame in video_frames:
+        pic = frame[y1:(y1 + H), x1:x2]
+        # crop = bgSubtract(mask,pic)
+
+        mask = cv2.createBackgroundSubtractorMOG2(history=3,
+                                                  varThreshold=100,
+                                                  detectShadows=False)
+        crop = mask.apply(pic)
+        crop = cv2.medianBlur(crop, blur_value)
+        crop = cv2.threshold(crop, 125, 255, cv2.THRESH_BINARY)[1]
+        image, contours, hierarchy = cv2.findContours(crop, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # list of all the coordinates (tuples) of each cell
+        coord_list = []
+
+        # to find the coordinates of the cells
+        sum_ch1 = []
+        for i in range(len(contours)):
+            avg = np.mean(contours[i], axis=0)
+            coord = (int(avg[0][0]), int(avg[0][1]))  ##Coord is (y,x)
+            if Show == 1:
+                cv2.circle(pic, coord, 10, (255, 0, 255), 1)
+            ch_pos = int(math.floor((coord[0]) / sub_ch[1]))
+            try:
+                sum_ch1[ch_pos] += 1
+            except:
+                error += 1
+
+        return sum_ch1
+
+def save_excel(sum_ch1):
     total_sum = []
+    total_sum.append(sum_ch1)
+
+    ###write dataframes and export to an Excel file
+    check = 0
+    title = []
+    for j in range(len(total_sum)):
+        if check < len(total_sum[j]): check = len(total_sum[j])
+        title.append('Run 1')
+
+    index = np.arange(0, check, 1)
+
+    for k in range(len(total_sum)):
+        if len(total_sum[k]) < check:
+            for l in range(len(total_sum[k]), check):
+                total_sum[k].append(0)
+
+
+    TTotal_sum = list(map(list, zip(*total_sum)))
+    # print(TTotal_sum)
+    df = DataFrame(data=TTotal_sum, columns=title)
+    # savefile = asksaveasfilename(filetypes=(("Excel files", "*.xlsx"), ("All files", "*.*")))
+    df.to_excel("testfile" + ".xlsx", index=False, sheet_name="Results")
+
+
+def main(test_npy=False):
+    # Get ROI from frames
     cap = cv2.VideoCapture(file_name)
     ret, image = cap.read()
     if not ret:
@@ -170,28 +258,7 @@ def main():
     print("augment:", blur_bgsub)
     cap.release()
     cv2.destroyAllWindows()
-    aug_list = list(blur_bgsub.values())
-    df_augment:DataFrame = DataFrame(data=aug_list)
-    plot1 = df_augment.plot()
-    plot1.set_xlabel('frames')
-    plot1.set_ylabel('Time in ms')
-
-    plt.savefig("df_augment")
-
-    detection_list = list(contour_detection.values())
-    df_detect = DataFrame(data=detection_list)
-    plot2 = df_detect.plot()
-    plot2.set_xlabel('frames')
-    plot2.set_ylabel('Time in ms')
-    plt.savefig("df_detect")
-
-
-
-    avg_augment = np.mean(df_augment)
-    avg_detect = np.mean(df_detect)
-
-    print("Average time for bgsubtract and blur: %f\n" % avg_augment)
-    print("Average time for count: %f\n" % avg_detect)
+    bench_plot(blur_bgsub, contour_detection)
 
     # set an array of sub channel dimension
     print('[RESULTS] for RUN', (cur + 1), 'is ', sum_ch1)
@@ -206,28 +273,11 @@ def main():
     cap.release()
     cv2.destroyAllWindows()
 
-    total_sum.append(sum_ch1)
+    if test_npy:
+        npy_frames = np.load("test_file.npy")
+        sum_ch1 = npy_detect(npy_frames)
 
-    ###write dataframes and export to an Excel file
-    check = 0
-    title = []
-    for j in range(len(total_sum)):
-        if check < len(total_sum[j]): check = len(total_sum[j])
-        title.append('Run 1')
-
-    index = np.arange(0, check, 1)
-
-    for k in range(len(total_sum)):
-        if len(total_sum[k]) < check:
-            for l in range(len(total_sum[k]), check):
-                total_sum[k].append(0)
-
-
-    TTotal_sum = list(map(list, zip(*total_sum)))
-    # print(TTotal_sum)
-    df = DataFrame(data=TTotal_sum, columns=title)
-    # savefile = asksaveasfilename(filetypes=(("Excel files", "*.xlsx"), ("All files", "*.*")))
-    df.to_excel("testfile" + ".xlsx", index=False, sheet_name="Results")
+    save_excel(sum_ch1)
     plt.show()
 
 

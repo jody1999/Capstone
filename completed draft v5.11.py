@@ -1,14 +1,13 @@
-import cv2
-import numpy as np
-from imutils.video import FPS
-from skimage.feature import blob_dog, blob_log, blob_doh
 import math
 import time
 import tkinter as tk
 from tkinter.filedialog import askopenfilenames
 from tkinter.filedialog import asksaveasfilename
-from pandas import DataFrame
 
+import cv2
+import numpy as np
+from imutils.video import FPS
+from pandas import DataFrame
 
 ### ----- Parameters to Change ----- ###
 H = 140             #No. of pixels to select for height of Region Of Interest
@@ -91,7 +90,7 @@ for cur in range(len(file)):
     for x in range(ch+1):
         sub_ch_x = round(x*(r[2]/(ch)))
         sub_ch.append(sub_ch_x)
-        cv2.line(imCrop, (sub_ch[x],0), (sub_ch[x], H), (200,200,100),1) 
+        cv2.line(imCrop, (sub_ch[x],0), (sub_ch[x], H), (200,200,100),1)
 
     cv2.namedWindow('Cropped Image', cv2.WINDOW_NORMAL)
     cv2.imshow('Cropped Image',imCrop)
@@ -128,7 +127,7 @@ for cur in range(len(file)):
         crop = cv2.threshold(crop, 125, 255, cv2.THRESH_BINARY)[1]
 
         # find contours
-        contours, hierarcy = cv2.findContours(crop, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        image, contours, hierarcy = cv2.findContours(crop, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         # list of all the coordinates (tuples) of each cell
         coord_list = [] 
@@ -158,39 +157,39 @@ for cur in range(len(file)):
     end=time.time()
     fps.stop()
     
-#     #set an array of sub channel dimension
-#     print('[RESULTS] for RUN',(cur+1),'is ', sum_ch1)
-#     print('[ERROR] Count is: ',error)
-#
-#     # stop the timer and display FPS information
-#     print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
-#     print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
-#     print('[INFO] Each cycle time taken = %0.5fs'%(cycle_end-cycle_start))
-#     print('----------------------------------------------------------------------')
-#
-#     cap.release()
-#     cv2.destroyAllWindows()
-#
-#     total_sum.append(sum_ch1)
-#
-# ###write dataframes and export to an Excel file
-# check = 0
-# title = []
-# for j in range(len(total_sum)):
-#     if check < len(total_sum[j]):check = len(total_sum[j])
-#     title.append('Run %i '%(j+1)+str(file[j]))
-#
-# index=np.arange(0,check,1)
-#
-# for k in range(len(total_sum)):
-#     if len(total_sum[k]) < check:
-#         for l in range(len(total_sum[k]),check):
-#             total_sum[k].append(0)
-#
-# TTotal_sum = list(map(list, zip(*total_sum)))
-# #print(TTotal_sum)
-# df = DataFrame(data=TTotal_sum, columns = title)
-# savefile = asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All files", "*.*") ))
-# df.to_excel(savefile+".xlsx", index=False, sheet_name="Results")
+    #set an array of sub channel dimension
+    print('[RESULTS] for RUN',(cur+1),'is ', sum_ch1)
+    print('[ERROR] Count is: ',error)
+
+    # stop the timer and display FPS information
+    print("[INFO] elasped time: {:.2f}".format(fps.elapsed()))
+    print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+    print('[INFO] Each cycle time taken = %0.5fs'%(cycle_end-cycle_start))
+    print('----------------------------------------------------------------------')
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+    total_sum.append(sum_ch1)
+
+###write dataframes and export to an Excel file
+check = 0
+title = []
+for j in range(len(total_sum)):
+    if check < len(total_sum[j]):check = len(total_sum[j])
+    title.append('Run %i '%(j+1)+str(file[j]))
+
+index=np.arange(0,check,1)
+
+for k in range(len(total_sum)):
+    if len(total_sum[k]) < check:
+        for l in range(len(total_sum[k]),check):
+            total_sum[k].append(0)
+
+TTotal_sum = list(map(list, zip(*total_sum)))
+#print(TTotal_sum)
+df = DataFrame(data=TTotal_sum, columns = title)
+savefile = asksaveasfilename(filetypes=(("Excel files", "*.xlsx"),("All files", "*.*") ))
+df.to_excel(savefile+".xlsx", index=False, sheet_name="Results")
 
 
