@@ -188,7 +188,6 @@ def camera_start():
     cam.UserSetSelector.SetValue(PySpin.UserSetSelector_Default)
     cam.UserSetLoad()
     got_camera = True
-    end_time = time.time()
 
     return
 

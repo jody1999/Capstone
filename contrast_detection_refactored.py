@@ -51,16 +51,19 @@ cam.Gain.SetValue(gain)
 cam.AcquisitionFrameRateEnable.SetValue(True)
 cam.AcquisitionFrameRate.SetValue(Capture_FPS)
 framerate = cam.AcquisitionFrameRate.GetValue()
-cap = cv2.VideoCapture(0)
-ret,frame = cap.read()
+# cap = cv2.VideoCapture(1)
+# ret,frame = cap.read()
 # sel = cv2.selectROI(frame)
+cam.BeginAcquisition()
 roi_image = cam.GetNextImage()
 roi_image = np.array(roi_image.GetNDArray())
-sel = cv2.selectROI(frame)
+sel = cv2.selectROI(roi_image)
 roi_x, roi_y, roi_width, roi_height = sel
 cv2.destroyAllWindows()
+print("ROI vairables:\n x %i\n y %i\n width %i\n height %i\n" % (roi_x, roi_y, roi_width, roi_height))
 
-cam.BeginAcquisition()
+
+
 run = 1
 start_time = time.time()
 while(run):
